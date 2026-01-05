@@ -1,4 +1,4 @@
-Baseline Model Description
+#Baseline Model Description
 
 This repository provides a baseline multimodal brain tumor segmentation model that integrates MRI imaging data with associated textual information from medical reports using the TextBraTS dataset.
 The image branch is built upon a transformer-based segmentation backbone (Swin UNETR), which extracts rich volumetric feature representations from multimodal MRI inputs. 

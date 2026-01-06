@@ -211,8 +211,8 @@ def get_args():
 
     parser.add_argument("--data_dir", default="/home/ai2lab/workshop_February/dataset", type=str, help="Dataset directory")
     parser.add_argument("--output_dir",default="/home/ai2lab/workshop_February/dataset/output",type=str, help="output directory")
-    parser.add_argument("--save_checkpoint", action="store_true", help="Save checkpoint during training")
-    parser.add_argument("--max_epochs", default=200, type=int, help="Max number of training epochs")
+  #  parser.add_argument("--save_checkpoint", action="store_true", help="Save checkpoint during training")
+   # parser.add_argument("--max_epochs", default=200, type=int, help="Max number of training epochs")
     parser.add_argument("--batch_size", default=1, type=int, help="Batch size")
 
     # Detect if running in Jupyter

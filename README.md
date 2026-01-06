@@ -12,5 +12,15 @@ This simple late-fusion strategy serves as a strong and interpretable baseline f
 
 
 ***Dataset Description***
+
 This project uses the TextBraTS dataset. Imaging data (4 MRI modalities per case) is downloaded from Kaggle, and corresponding text data is obtained from the official TextBraTS page (https://github.com/Jupitern52/TextBraTS). 
 The dataset was saved on the ARC cluster and prepared locally for this project; while the folder structure may differ from the original, the same JSON files from TextBraTS are used for train, validation, and test splits. Images and labels are stored in imagesTr and labelsTr, with the CSV files provided inside imagesTr for easy reference.
+
+
+***Getting Started***
+
+To run the codes, execute the following commands, making sure to adjust the paths to your source directory and your desired output folder:
+
+python baseline_fusion_model.py --data_dir /dataset --output_dir /dataset/output --batch_size 2 --max_epochs 100 --save_checkpoint
+
+python test.py --data_dir /dataset --output_dir /dataset/output --batch_size 1

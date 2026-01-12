@@ -126,16 +126,7 @@ def test(test_loader, model, input_dir, results_dir):
     )
 
     # predictor with text (keep your logic)
-    predictor_with_text = lambda x: model(x, text)
-
-    model_inferer_with_text = partial(
-        sliding_window_inference,
-        roi_size=[96,96,96],
-        sw_batch_size=1,
-        predictor=predictor_with_text,
-        overlap=0.5,
-        mode="gaussian"
-    )
+    
     # --- RESET metrics BEFORE evaluation ---
     dice_metric.reset()
     hd95_metric.reset()
@@ -147,7 +138,17 @@ def test(test_loader, model, input_dir, results_dir):
             gt=batch["seg"].to(device)
             text = batch["text_feature"].to(device)
             print('check shape first',img.shape,text.shape,gt.shape)
+            
+            predictor_with_text = lambda x: model(x, text)
 
+            model_inferer_with_text = partial(
+            sliding_window_inference,
+            roi_size=[96,96,96],
+            sw_batch_size=1,
+            predictor=predictor_with_text,
+            overlap=0.5,
+            mode="gaussian"
+            )
             # --- Sliding window inference ---
             logits = model_inferer_with_text(img)
             # print('check:',logits)

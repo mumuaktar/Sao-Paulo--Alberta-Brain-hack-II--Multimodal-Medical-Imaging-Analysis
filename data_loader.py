@@ -89,5 +89,12 @@ def load_data(
     return loader
 
 
+if __name__ == "__main__":
+    """
+    Testing the data loader
+    """
+    raise NotImplementedError("Not implemented")
+
+
 
 

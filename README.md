@@ -17,6 +17,22 @@ This project uses the TextBraTS dataset. Imaging data (4 MRI modalities per case
 The dataset was saved on the ARC cluster and prepared locally for this project; while the folder structure may differ from the original, the same JSON files from TextBraTS are used for train, validation, and test splits. Images and labels are stored in imagesTr and labelsTr, with the CSV files provided inside imagesTr for easy reference.
 
 
+***Requirements***
+
+We recommend `uv` for dependency management. To install dependencies:
+
+1. Install `uv` (if not already installed):
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+2. Sync dependencies:
+   ```bash
+   uv sync
+   ```
+
+This will create a local virtual environment and install all required packages (torch, monai, pandas, numpy, nibabel) as specified in `pyproject.toml`.
+
 ***Getting Started***
 
 To run the codes, execute the following commands, making sure to adjust the paths to your source directory and your desired output folder:

@@ -167,7 +167,7 @@ def main(config: dict):
    )
 
     # Print architectural summary
-    print(summary(model))
+    summary(model)
 
     # === Training optimizer and learning rate scheduler setup ===
     max_epochs = config['max_epochs']
@@ -177,7 +177,11 @@ def main(config: dict):
 
     # === Initialize data and call train() ===
     train_loader, val_loader = initialize_data_loaders(config)
-    train(train_loader, val_loader, model, optimizer, scheduler, config)
+
+    if config['debug']:
+        print("Debug mode enabled, skipping training")
+    else:
+        train(train_loader, val_loader, model, optimizer, scheduler, config)
 
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ import torch
 from monai.inferers import sliding_window_inference
 from monai.metrics import DiceMetric, HausdorffDistanceMetric
 from monai.utils.enums import MetricReduction
+from tqdm import tqdm
 
 # Local module imports
 from baseline_fusion_model import SwinUNETR_image_text_fusion
@@ -58,7 +59,7 @@ def test(test_loader, model, input_dir: str, results_dir: str):
     hd95_metric.reset()
 
     with torch.no_grad():
-        for batch_idx, batch in enumerate(test_loader):
+        for batch in tqdm(test_loader, desc="Testing", total=len(test_loader)):
             subject_id = batch["subject_id"][0]
             img = batch["img"].to(device)
             gt = batch["seg"].to(device)
@@ -97,7 +98,7 @@ def test(test_loader, model, input_dir: str, results_dir: str):
             save_path = os.path.join(results_dir, f"{subject_id}.nii")
             nib.save(nib.Nifti1Image(single_channel_pred, affine), save_path)
 
-            print(f"Saved prediction for {subject_id}")
+            tqdm.write(f"Saved prediction for {subject_id}")
 
     # Aggregate metrics
     dice, not_nans = dice_metric.aggregate()

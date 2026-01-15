@@ -22,6 +22,8 @@ from monai.losses import DiceLoss
 from monai.metrics import DiceMetric
 from monai.transforms import Activations, AsDiscrete
 from monai.utils.enums import MetricReduction
+from tqdm import tqdm
+
 
 def convert_to_single_channel(multi_channel_np: np.ndarray) -> np.ndarray:
     """
@@ -130,7 +132,7 @@ def train(train_loader, val_loader, model, optimizer, scheduler, config: dict):
         train_loss = 0.0
 
         # Training loop
-        for batch in train_loader:
+        for batch in tqdm(train_loader, desc="Training", total=len(train_loader)):
             img = batch["img"].to(device)
             seg = batch.get("seg").to(device)
             text = batch.get("text_feature").to(device)
@@ -164,7 +166,7 @@ def train(train_loader, val_loader, model, optimizer, scheduler, config: dict):
         val_loss = 0.0
         with torch.no_grad():
             dice_metric.reset()
-            for batch_idx, batch in enumerate(val_loader):
+            for batch in tqdm(val_loader, desc="Validating", total=len(val_loader)):
                 img = batch["img"].to(device)
                 seg = batch.get("seg").to(device)
                 text = batch.get("text_feature").to(device)

@@ -3,29 +3,22 @@
 """
 Created on Mon Jan  5 13:09:19 2026
 
-@author: mumuaktar
+@author: mumuaktar, dscarmo
 """
-
-
-
-
-import numpy as np
-import nibabel as nib
-import torch
+# Standard library imports
 import os
-from monai.data import decollate_batch
+from functools import partial
+
+# Third-party library imports
 import nibabel as nib
-from monai.transforms import AsDiscrete, Compose, EnsureType, Activations
-from monai.metrics import DiceMetric
-from monai.utils.enums import MetricReduction
-from functools import partial
-from monai.inferers import sliding_window_inference
-from functools import partial
-from monai.losses import DiceLoss
-import torch.nn.functional as F
-from monai.losses import FocalLoss
+import numpy as np
+import torch
 import torch.nn as nn
-import torch.nn.functional as F
+from monai.inferers import sliding_window_inference
+from monai.losses import DiceLoss
+from monai.metrics import DiceMetric
+from monai.transforms import Activations, AsDiscrete
+from monai.utils.enums import MetricReduction
 
 def convert_to_single_channel(multi_channel_np: np.ndarray) -> np.ndarray:
     """
@@ -55,27 +48,41 @@ def convert_to_single_channel(multi_channel_np: np.ndarray) -> np.ndarray:
     return output
 
 
-def train(train_loader, val_loader, model, optimizer, scheduler, max_epochs, directory_name, start_epoch=1):
+def train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, args):
+    """
+    Train the model, monolithic function dealing with model training, evaluation and saving.
+    Args:
+        train_loader: DataLoader, training data loader
+        val_loader: DataLoader, validation data loader
+        model: nn.Module, model to train
+        optimizer: torch.optim.Optimizer, optimizer
+        scheduler: torch.optim.lr_scheduler, learning rate scheduler
+        start_epoch: int, start epoch
+        args: argparse.Namespace, arguments
+    """
+    # Prepare model and output directory
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = model.to(device)            # Move model to cuda:0
+    model: nn.Module = model.to(device)            # Move model to cuda:0
     model.train()
-    results_dir=os.path.join(directory_name,"results_test")
+    results_dir = os.path.join(args.output_dir, "results_test")
     os.makedirs(results_dir,exist_ok=True)
 
-    criterion = DiceLoss(to_onehot_y=False, sigmoid=True)
+    # Initialize loss functions, metrics, and auxiliary objects for output processing
+    criterion = DiceLoss(to_onehot_y=False, sigmoid=True)  # internal sigmoid!
     criterion_ce = nn.BCEWithLogitsLoss()
-
     post_sigmoid = Activations(sigmoid=True)
     post_pred = AsDiscrete(argmax=False, threshold=0.5)
     dice_metric = DiceMetric(include_background=True, reduction=MetricReduction.MEAN_BATCH, get_not_nans=True)
 
-    checkpoint_path = os.path.join(directory_name, "best_model_test.pth")
-    last_model_path = os.path.join(directory_name, "last_model_test.pth")
-    training_results_dir = os.path.join(directory_name, "training_results_test")
+    # Initialize checkpoint paths and directories
+    checkpoint_path = os.path.join(args.output_dir, "best_model_test.pth")
+    last_model_path = os.path.join(args.output_dir, "last_model_test.pth")
+    training_results_dir = os.path.join(args.output_dir, "training_results_test")
     os.makedirs(training_results_dir, exist_ok=True)
 
+    # Initialize best dice score and resume training if last model exists
     best_val_loss = float("inf")
-    best_dice_score=-1.0
+    best_dice_score = -1.0
     if os.path.exists(last_model_path):
         checkpoint = torch.load(last_model_path, map_location=device)
 
@@ -83,132 +90,136 @@ def train(train_loader, val_loader, model, optimizer, scheduler, max_epochs, dir
         optimizer.load_state_dict(checkpoint['optimizer'])
         scheduler.load_state_dict(checkpoint['scheduler'])
         # best_val_loss = checkpoint.get('best_val_loss', float("inf"))
-        best_dice_score=checkpoint.get('best_dice_score',-1)
+        best_dice_score = checkpoint.get('best_dice_score', -1)
         start_epoch = checkpoint.get('epoch', 1) + 1
         print(f"Last model loaded. Resuming training from epoch: {start_epoch}")
         print(f"Resuming with best Dice score: {best_dice_score:.4f}")
 
-
-
-    for epoch in range(start_epoch, max_epochs + 1):
+    # Each epoch performs one training loop and one validation loop
+    for epoch in range(start_epoch, args.max_epochs + 1):
         print(f"\n🔁 Epoch {epoch}")
         model.train()
         train_loss = 0.0
 
+        # Training loop
         for batch in train_loader:
             img = batch["img"].to(device)
             seg = batch.get("seg").to(device)
-            text=batch.get("text_feature").to(device)
+            text = batch.get("text_feature").to(device)
             B, C, H, W, D = img.shape
 
             optimizer.zero_grad()
+
+            # Get output activations (logits)
             pred_seg = model(img,text)
 
+            # Compute loss, BCE + Dice
+            # BCEWithLogitsLoss uses the raw logits
+            # DiceLoss uses an internal sigmoid activation
             loss_seg = criterion(pred_seg, seg) + criterion_ce(pred_seg, seg)
 
+            # Accumulate loss
             train_loss += loss_seg.item()
+
+            # Backpropagate loss
             loss_seg.backward()
             optimizer.step()
 
-
+        # Average loss over all batches
         train_loss /= len(train_loader)
         print(f"Training Loss: {train_loss:.4f}")
 
         # ----------------------
         # Validation
         # ----------------------
-
         model.eval()
-        val_loss = 0.0
-        dice_scores = []
-        import numpy as np
-
-        affine = np.eye(4)
-
         with torch.no_grad():
             dice_metric.reset()
             for batch_idx, batch in enumerate(val_loader):
-                    img = batch["img"].to(device)
-                    seg = batch.get("seg").to(device)
-                    text = batch.get("text_feature").to(device)
+                img = batch["img"].to(device)
+                seg = batch.get("seg").to(device)
+                text = batch.get("text_feature").to(device)
 
+                # Define a predictor lambda that includes text_feature
+                predictor_with_text = lambda x: model(x, text)
 
-                    # Define a predictor lambda that includes text_feature
-                    predictor_with_text = lambda x: model(x, text)
+                # Create a sliding_window_inference instance with this predictor
+                model_inferer_with_text = partial(
+                    sliding_window_inference,
+                    roi_size = [96, 96, 96],
+                    sw_batch_size = 1,
+                    predictor = predictor_with_text,
+                    overlap = 0.5,
+                )
 
-                    # Create a sliding_window_inference instance with this predictor
-                    model_inferer_with_text = partial(
-                        sliding_window_inference,
-                        roi_size=[96,96,96],
-                        sw_batch_size=1,
-                        predictor=predictor_with_text,
-                        overlap=0.5,
-                    )
+                # Run inference
+                pred_seg = model_inferer_with_text(img)
 
-                    # Run inference
-                    pred_seg = model_inferer_with_text(img)
-                    # val_output_convert = [post_pred(post_sigmoid(p)) for p in pred_seg]
-                    # pred_seg = [p for p in zip(val_output_convert)]
-                    # true_seg = [s for s in zip(seg)]
-                    pred = post_pred(post_sigmoid(pred_seg))
+                # Convert logits to first probabilities and then to discrete predictions
+                pred = post_pred(post_sigmoid(pred_seg))
 
+                # Compute Dice score
+                dice_metric(y_pred=pred, y=seg)
 
+                # Save predictions and ground truths for each subject
+                for i in range(img.shape[0]):
+                    subject_id = batch["subject_id"][i]
 
-                    dice_metric(y_pred=pred, y=seg)
-                    for i in range(img.shape[0]):
-                        subject_id = batch["subject_id"][i]
+                    # Get the image path for the original image to build output paths
+                    img_paths = [os.path.join(args.data_dir, "imagesTr", f"{subject_id}_0000.nii")]
+                    img_path = img_paths[0]
 
+                    # Build save filenames
+                    save_filename = f"{subject_id}"
+                    save_img_path = os.path.join(results_dir, f"{save_filename}_gt.nii")
+                    save_pred_path = os.path.join(results_dir, f"{save_filename}_pred.nii")
+                    
+                    # Outputs need to be moved to the CPU and converted to numpy arrays before saving as NIfTI files
+                    # Note uint8 type, this saves disk space and is faster to save and load
+                    pred_np = pred[i].detach().cpu().numpy().astype(np.uint8)
+                    seg_np = seg[i].detach().cpu().numpy().astype(np.uint8)            
+                    single_channel_pred = convert_to_single_channel(pred_np)
+                    single_channel_gt = convert_to_single_channel(seg_np)
+                    
+                    # Save this single-channel prediction and ground truth as NIfTI
+                    # Loading the original image's affine is important for saving the predictions as NIfTI files with the correct orientation
+                    affine = nib.load(img_path).affine
+                    nib.save(nib.Nifti1Image(single_channel_pred, affine), save_pred_path)
+                    nib.save(nib.Nifti1Image(single_channel_gt, affine), save_img_path)
 
-                        img_paths = [os.path.join(directory_name, "imagesTr", f"{subject_id}_0000.nii")]
-
-                        img_path = img_paths[0]
-                        save_filename = f"{subject_id}"
-
-                        save_img_path = os.path.join(results_dir, f"{save_filename}_gt.nii")
-                        save_pred_path = os.path.join(results_dir, f"{save_filename}_pred.nii")
-
-                        affine = nib.load(img_path).affine
-                        pred_np = pred[i].detach().cpu().numpy().astype(np.uint8)
-                        seg_np = seg[i].detach().cpu().numpy().astype(np.uint8)            
-                        single_channel_pred = convert_to_single_channel(pred_np)
-                        single_channel_gt = convert_to_single_channel(seg_np)
-                                   # Save this single-channel prediction as NIfTI
-                        nib.save(nib.Nifti1Image(single_channel_pred, affine), save_pred_path)
-                        nib.save(nib.Nifti1Image(single_channel_gt, affine), save_img_path)
-
-
+        # Aggregate Dice scores over all validation samples
         per_class_dice, _ = dice_metric.aggregate()
         mean_dice = per_class_dice.mean().item()
         print(f"Dice Scores — TC: {per_class_dice[0].item():.4f}, "
-                  f"WT: {per_class_dice[1].item():.4f}, ET: {per_class_dice[2].item():.4f}")
+              f"WT: {per_class_dice[1].item():.4f}, ET: {per_class_dice[2].item():.4f}")
         print(f"Mean Dice: {mean_dice:.4f}")
 
+        # Is this the best Dice score so far?
         if mean_dice > best_dice_score:
-                best_dice_score = mean_dice
-                torch.save({
-                    'epoch': epoch,
-                    "state_dict": model.state_dict(),
-                    "optimizer": optimizer.state_dict(),
-                    "scheduler": scheduler.state_dict(),
-                    # "val_loss": val_loss,
-                    "best_dice_score": best_dice_score
-                }, checkpoint_path)
-                print("Best model saved based on Dice score.")
+            best_dice_score = mean_dice
 
+            # Save best model based on Dice score
+            torch.save({
+                'epoch': epoch,
+                "state_dict": model.state_dict(),
+                "optimizer": optimizer.state_dict(),
+                "scheduler": scheduler.state_dict(),
+                "best_dice_score": best_dice_score
+            }, checkpoint_path)
 
-
-
+            print(f"Best model saved based on Dice score: {best_dice_score:.4f}")
+        
+        # Also update what was the last model
         torch.save({
             'epoch': epoch,
             "state_dict": model.state_dict(),
             "optimizer": optimizer.state_dict(),
             "scheduler": scheduler.state_dict(),
-            # "val_loss": val_loss,
-            # "best_val_loss": best_val_loss,
-            "best_dice_score":best_dice_score
+            "best_dice_score": best_dice_score
         }, last_model_path)
 
-        # Step the scheduler
+        # Step the learning rate scheduler
         scheduler.step()
-    print("Training complete.")
 
+    # This is the closing of all loops in the training function. Training is complete!
+    print(f"Training complete. Best Dice score: {best_dice_score:.4f}")

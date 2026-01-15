@@ -3,19 +3,20 @@
 """
 Created on Mon Jan  5 12:57:05 2026
 
-@author: mumuaktar
+@author: mumuaktar, dscarmo
 """
-
-import torch
+# Third-party library imports
 import numpy as np
-from monai.transforms import MapTransform
-from monai.transforms import Compose
+import torch
 from monai.transforms import (
-     ToTensord,
+    Compose,
     LoadImaged,
-RandSpatialCropd,
-NormalizeIntensityd
+    MapTransform,
+    NormalizeIntensityd,
+    RandSpatialCropd,
+    ToTensord,
 )
+
 
 class ConvertToMultiChannelBasedOnCustomBratsClassesd(MapTransform):
     """
@@ -30,7 +31,6 @@ class ConvertToMultiChannelBasedOnCustomBratsClassesd(MapTransform):
     - Channel 1: Whole Tumor (WT) = 1 + 2 + 3
     - Channel 2: Enhancing Tumor (ET) = 3
     """
-
     def __call__(self, data):
         d = dict(data)
         for key in self.keys:
@@ -39,13 +39,11 @@ class ConvertToMultiChannelBasedOnCustomBratsClassesd(MapTransform):
             if isinstance(seg, torch.Tensor):
                 seg = seg.numpy()
 
-
-
-
             # make sure we're working with 3D (no extra channel dim)
             if seg.ndim == 4 and seg.shape[0] == 1:
                 seg = np.squeeze(seg, axis=0)
 
+            # Logic follows class documentation to build multi-channel output (3, H, W, D)
             seg = np.where(seg == 4, 3, seg)
             tc = np.logical_or(seg == 1, seg == 3)   # Tumor Core
             wt = np.logical_or(tc, seg == 2)         # Whole Tumor
@@ -55,13 +53,11 @@ class ConvertToMultiChannelBasedOnCustomBratsClassesd(MapTransform):
             d[key] = multi_channel
         return d
 
-def print_shape(d):
-    for k, v in d.items():
-        print(f"{k}: {v.shape}")
-    return d
-
 
 class LoadNumpyd(MapTransform):
+    """
+    Load Text Embedding numpy arrays from disk and convert to float32
+    """
     def __init__(self, keys, allow_missing_keys=False):
         super().__init__(keys)
         self.allow_missing_keys = allow_missing_keys
@@ -83,27 +79,33 @@ class LoadNumpyd(MapTransform):
         return d
 
 
+def print_shape(d):
+    for k, v in d.items():
+        print(f"{k}: {v.shape}")
+    return d
 
+# When imported, this module will define the transforms for the train, val and test datasets as global variables
 train_transforms = Compose([
-    LoadImaged(keys=["img",  "seg"], allow_missing_keys=True, ensure_channel_first=True),
-    LoadNumpyd(keys=["text_feature"],allow_missing_keys=True),
+    LoadImaged(keys=["img", "seg"], allow_missing_keys=True, ensure_channel_first=True),
+    LoadNumpyd(keys=["text_feature"], allow_missing_keys=True),
     ConvertToMultiChannelBasedOnCustomBratsClassesd(keys="seg", allow_missing_keys=True),
-    RandSpatialCropd(keys=["img", "seg"], roi_size=(96,96,96), allow_missing_keys=True),
+    RandSpatialCropd(keys=["img", "seg"], roi_size=(96, 96, 96), allow_missing_keys=True),
     NormalizeIntensityd(keys="img", nonzero=True, channel_wise=True),
-    ToTensord(keys=["img", "seg","text_feature"], dtype=torch.float32, allow_missing_keys=True),    
-])    
+    ToTensord(keys=["img", "seg", "text_feature"], dtype=torch.float32, allow_missing_keys=True),
+])
 
 val_transforms = Compose([
-    LoadImaged(keys=["img",  "seg"], ensure_channel_first=True,allow_missing_keys=True),
-    LoadNumpyd(keys=["text_feature"],allow_missing_keys=True),
-    ConvertToMultiChannelBasedOnCustomBratsClassesd(keys="seg",allow_missing_keys=True),
+    LoadImaged(keys=["img", "seg"], ensure_channel_first=True, allow_missing_keys=True),
+    LoadNumpyd(keys=["text_feature"], allow_missing_keys=True),
+    ConvertToMultiChannelBasedOnCustomBratsClassesd(keys="seg", allow_missing_keys=True),
     NormalizeIntensityd(keys="img", nonzero=True, channel_wise=True),
-    ToTensord(keys=["img", "seg","text_feature"],dtype=torch.float32, allow_missing_keys=True),
+    ToTensord(keys=["img", "seg", "text_feature"], dtype=torch.float32, allow_missing_keys=True),
 ])
+
 test_transforms = Compose([
-    LoadImaged(keys=["img",  "seg"], ensure_channel_first=True,allow_missing_keys=True),
-    LoadNumpyd(keys=["text_feature"],allow_missing_keys=True),
-    ConvertToMultiChannelBasedOnCustomBratsClassesd(keys="seg",allow_missing_keys=True),
+    LoadImaged(keys=["img", "seg"], ensure_channel_first=True, allow_missing_keys=True),
+    LoadNumpyd(keys=["text_feature"], allow_missing_keys=True),
+    ConvertToMultiChannelBasedOnCustomBratsClassesd(keys="seg", allow_missing_keys=True),
     NormalizeIntensityd(keys="img", nonzero=True, channel_wise=True),
-    ToTensord(keys=["img", "seg","text_feature"],dtype=torch.float32, allow_missing_keys=True),
+    ToTensord(keys=["img", "seg", "text_feature"], dtype=torch.float32, allow_missing_keys=True),
 ])

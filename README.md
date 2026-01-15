@@ -19,7 +19,9 @@ The dataset was saved on the ARC cluster and prepared locally for this project; 
 
 ***Requirements***
 
-We recommend `uv` for dependency management. To install dependencies:
+We recommend `uv` for dependency management, but you can also use `pip` with `requirements.txt`.
+
+**Option 1: Using `uv` (recommended)**
 
 1. Install `uv` (if not already installed):
    ```bash
@@ -31,12 +33,39 @@ We recommend `uv` for dependency management. To install dependencies:
    uv sync
    ```
 
-This will create a local virtual environment and install all required packages (torch, monai, pandas, numpy, nibabel) as specified in `pyproject.toml`.
+This will create a local virtual environment and install all required packages as specified in `pyproject.toml`.
+
+**Option 2: Using `conda` with `requirements.txt`**
+
+1. Create a conda environment with Python 3.12:
+   ```bash
+   conda create -n brainhack python=3.12
+   conda activate brainhack
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
 
 ***Getting Started***
 
-To run the codes, execute the following commands, making sure to adjust the paths to your source directory and your desired output folder:
+To run the codes, depending on how you created your environment:
 
-python baseline_fusion_model.py --data_dir /dataset --output_dir /dataset/output --batch_size 2 --max_epochs 100 --save_checkpoint
+**Option 1: Using `uv` (recommended)**
 
-python test.py --data_dir /dataset --output_dir /dataset/output --batch_size 1
+```bash
+uv run python baseline_fusion_model.py configs/debug_config.yaml
+uv run python test.py configs/debug_config.yaml
+```
+
+**Option 2: Using `conda`**
+
+```bash
+conda activate brainhack
+python baseline_fusion_model.py configs/debug_config.yaml
+python test.py configs/debug_config.yaml
+```
+
+Make sure to adjust the config YAML files in the configs folder to point to your source directory and your desired output folder. 

@@ -13,11 +13,15 @@ from pathlib import Path
 
 # Third-party library imports
 import yaml
+from dotenv import load_dotenv
 
 
 def load_config(config_path: str) -> dict:
     """
     Load configuration from YAML file.
+    
+    Loads environment variables from a .env file in the project root (if present)
+    before loading the YAML configuration.
     
     Args:
         config_path: Path to the YAML configuration file
@@ -25,6 +29,9 @@ def load_config(config_path: str) -> dict:
     Returns:
         Dictionary containing configuration parameters
     """
+    # Load environment variables from .env file (if present)
+    load_dotenv()
+    
     config_path = Path(config_path)
     if not config_path.exists():
         raise FileNotFoundError(f"Config file not found: {config_path}")
@@ -73,11 +80,28 @@ def get_config_args(description: str, example_usage: str, default_config: str = 
     # Load configuration from YAML file
     config = load_config(parsed_args.config)
 
-    # Check if data_dir and output_base_dir are set
-    if config['data_dir'] is None or config['output_base_dir'] is None:
-        # Try to get from environment variables
+    # Check if data_dir is set, if not try to get from environment variable
+    if config.get('data_dir') is None:
         config['data_dir'] = os.getenv('DATA_DIR', None)
+    
+    # Check if output_base_dir is set, if not try to get from environment variable
+    if config.get('output_base_dir') is None:
         config['output_base_dir'] = os.getenv('OUTPUT_BASE_DIR', None)
+    
+    # Validate that required paths are set
+    if config.get('data_dir') is None:
+        raise ValueError(
+            "data_dir is not set. Please either:\n"
+            "  1. Set 'data_dir' in your YAML config file, or\n"
+            "  2. Set the DATA_DIR environment variable\n"
+        )
+    
+    if config.get('output_base_dir') is None:
+        raise ValueError(
+            "output_base_dir is not set. Please either:\n"
+            "  1. Set 'output_base_dir' in your YAML config file, or\n"
+            "  2. Set the OUTPUT_BASE_DIR environment variable\n"
+        )
     
     # Add debug flag and config metadata to the dictionary
     config['debug'] = parsed_args.debug

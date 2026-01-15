@@ -1,0 +1,1 @@
+Suggested folder to hold output logs and weights.

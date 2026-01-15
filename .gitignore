@@ -1,5 +1,5 @@
-# 
-notes
+# Ignore output after its on the repo
+output
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

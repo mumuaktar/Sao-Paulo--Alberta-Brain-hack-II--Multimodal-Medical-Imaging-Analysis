@@ -6,9 +6,7 @@ Created on Mon Jan  5 13:14:05 2026
 @author: mumuaktar, dscarmo
 """
 # Standard library imports
-import argparse
 import os
-import sys
 from functools import partial
 
 # Third-party library imports
@@ -22,6 +20,7 @@ from monai.utils.enums import MetricReduction
 # Local module imports
 from baseline_fusion_model import SwinUNETR_image_text_fusion
 from data_loader import load_data
+from load_config import get_config_args
 from train_function import convert_to_single_channel
 from transforms_function import test_transforms
 
@@ -119,51 +118,25 @@ def test(test_loader, model, input_dir: str, results_dir: str):
         f"TC={hd95[0]:.2f}, WT={hd95[1]:.2f}, ET={hd95[2]:.2f}"
     )
 
-def get_test_args():
-    """
-    Parse command line arguments for testing.
-    
-    Returns:
-        Parsed arguments namespace
-    """
-    parser = argparse.ArgumentParser(description="Swin UNETR for Automated Brain Tumor Segmentation")
-
-    parser.add_argument("--data_dir", default="/home/ai2lab/workshop_February/dataset", type=str, help="Dataset directory")
-    parser.add_argument("--output_dir", default="/home/ai2lab/workshop_February/dataset/output", type=str, help="output directory")
-    parser.add_argument("--batch_size", default=1, type=int, help="Batch size")
-
-    # Detect if running in Jupyter
-    if "ipykernel" in sys.modules:
-        # Jupyter: ignore sys.argv to prevent conflicts
-        args = parser.parse_args(args=[])
-    else:
-        # Standard script: parse normally
-        args = parser.parse_args()
-
-    # Pretty print arguments
-    print("CLI Arguments:")
-    for arg in vars(args):
-        print(f"{arg}: {getattr(args, arg)}")
-    print("--------------------------------")
-
-    return args
-
-
 def main():
     """
     Main entry point for testing.
     
     Loads the model, checkpoint, and runs inference on the test dataset.
     """
-    # Get command line arguments
-    args = get_test_args()
+    # Get configuration from command line arguments and config file
+    config = get_config_args(
+        description="Swin UNETR for Automated Brain Tumor Segmentation",
+        example_usage="Example: python test.py configs/train_config.yaml",
+        default_config="configs/train_config.yaml"
+    )
 
     # Initialize data loader
     test_loader = load_data(
-        base_path=args.data_dir,
+        base_path=config['data_dir'],
         split="test",
         transforms=test_transforms,
-        batch_size=args.batch_size,
+        batch_size=config['test_batch_size'],
         shuffle=False,
     )
 
@@ -179,14 +152,19 @@ def main():
     model = model.to(device)
     model.eval()
 
-    checkpoint_path = os.path.join(args.data_dir, "best_model_test.pth")
+    # Create output directory based on config name
+    output_dir = os.path.join(config['output_base_dir'], config['config_name'])
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Load checkpoint from the config-based output directory
+    checkpoint_path = os.path.join(output_dir, "best_model_test.pth")
     checkpoint = torch.load(checkpoint_path, map_location=device)
     model.load_state_dict(checkpoint["state_dict"])
     print("Checkpoint loaded.")
 
     # Run inference and save predictions
     with torch.no_grad():
-        test(test_loader, model, args.data_dir, args.output_dir)
+        test(test_loader, model, config['data_dir'], output_dir)
 
 
 if __name__ == "__main__":

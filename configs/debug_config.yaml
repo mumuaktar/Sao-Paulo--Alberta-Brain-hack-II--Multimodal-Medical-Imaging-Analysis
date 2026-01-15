@@ -1,0 +1,12 @@
+# Null paths will trigger looking for environment variables
+data_dir: null
+output_base_dir: null
+
+# Training parameters
+max_epochs: 200
+batch_size: 2
+feature_size: 48
+lr: 0.0001
+
+# Testing parameters
+test_batch_size: 1

@@ -4,8 +4,7 @@ Created on Mon Jan  5 12:57:05 2026
 @authors: mumuaktar, dscarmo
 """
 # Standard library imports
-import argparse
-import sys
+import os
 
 # Third-party library imports
 import torch
@@ -17,6 +16,7 @@ from tqdm import tqdm
 
 # Local module imports
 from data_loader import load_data
+from load_config import get_config_args
 from train_function import train
 from transforms_function import train_transforms, val_transforms
 
@@ -107,51 +107,26 @@ class SwinUNETR_image_text_fusion(nn.Module):
         return seg_output
 
 
-def get_args():
-    parser = argparse.ArgumentParser(description="Swin UNETR for Automated Brain Tumor Segmentation")
-
-    parser.add_argument("--data_dir", default="/home/ai2lab/workshop_February/dataset", type=str, help="Dataset directory")
-    parser.add_argument("--output_dir", default="/home/ai2lab/workshop_February/dataset/output", type=str, help="output directory")
-    parser.add_argument("--save_checkpoint", action="store_true", help="Save checkpoint during training")
-    parser.add_argument("--max_epochs", default=200, type=int, help="Max number of training epochs")
-    parser.add_argument("--batch_size", default=2, type=int, help="Training batch size")
-    parser.add_argument("--feature_size", default=48, type=int, help="Feature size for SwinUNETR")
-    parser.add_argument("--lr", default=1e-4, type=float, help="Learning rate")
-    parser.add_argument("--debug", action="store_true", help="Debug mode")
-
-    # Detect if running in Jupyter
-    if "ipykernel" in sys.modules:
-        # Jupyter: ignore sys.argv to prevent conflicts
-        args = parser.parse_args(args=[])
-    else:
-        # Standard script: parse normally
-        args = parser.parse_args()
-
-    # Pretty print arguments
-    print("CLI Arguments:")
-    for arg in vars(args):
-        print(f"{arg}: {getattr(args, arg)}")
-    print("--------------------------------")
-
-    return args
-
-def initialize_data_loaders(args):
+def initialize_data_loaders(config: dict):
     """
     Initialize data loaders for training and validation
+    
+    Args:
+        config: Dictionary containing configuration parameters
     """
     train_loader = load_data(
-        base_path=args.data_dir,
+        base_path=config['data_dir'],
         split="train",
         transforms=train_transforms,
-        batch_size=args.batch_size,
+        batch_size=config['batch_size'],
         shuffle=True,
     )
 
     val_loader = load_data(
-        base_path=args.data_dir,
+        base_path=config['data_dir'],
         split="val",
         transforms=val_transforms,
-        batch_size=1,
+        batch_size=config['test_batch_size'],
         shuffle=False,
     )
 
@@ -160,19 +135,19 @@ def initialize_data_loaders(args):
         debug_message = f"Training batch shape: {batch['text_feature'].shape}, {batch['img'].shape}, {batch['seg'].shape}"
         tqdm.write(debug_message)
         # only print first batch if not in debug mode
-        if not args.debug: 
+        if not config['debug']: 
             break
 
     for batch in tqdm(val_loader, desc="Testing validation data loading"):
         debug_message = f"Validation batch shape: {batch['text_feature'].shape}, {batch['img'].shape}, {batch['seg'].shape}"
         tqdm.write(debug_message)
         # only print first batch if not in debug mode
-        if not args.debug: 
+        if not config['debug']: 
             break
     
     return train_loader, val_loader
 
-def main(args):
+def main(config: dict):
     """
     Main entry point for training
 
@@ -180,31 +155,39 @@ def main(args):
     1. Initialize model
     2. Initialize optimizer and learning rate scheduler
     3. Initialize data and call train()
+    
+    Args:
+        config: Dictionary containing configuration parameters
     """
     # === Initialize model ===
     model = SwinUNETR_image_text_fusion(
        in_channels=4,
        seg_out_channels=3,      # tumor classes
-       feature_size=args.feature_size
+       feature_size=config['feature_size']
    )
 
-    print(summary(model, input_size=(args.batch_size, 4, 96, 96, 96)))
+    # Print architectural summary
+    print(summary(model))
 
     # === Training optimizer and learning rate scheduler setup ===
     start_epoch = 1
-    max_epochs = args.max_epochs
-    optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=1e-5)
+    max_epochs = config['max_epochs']
+    optimizer = torch.optim.AdamW(model.parameters(), lr=config['lr'], weight_decay=1e-5)
     scheduler = CosineAnnealingLR(optimizer, T_max=max_epochs, eta_min=1e-6)
 
 
     # === Initialize data and call train() ===
-    train_loader, val_loader = initialize_data_loaders(args)
-    train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, args)
+    train_loader, val_loader = initialize_data_loaders(config)
+    train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, config)
 
 
 if __name__ == "__main__":
-    # Get command line arguments
-    args = get_args()
+    # Get configuration from command line arguments and config file
+    config = get_config_args(
+        description="Swin UNETR for Automated Brain Tumor Segmentation",
+        example_usage="Example: python baseline_fusion_model.py configs/train_config.yaml",
+        default_config="configs/train_config.yaml"
+    )
 
     # Call main function
-    main(args)
+    main(config)

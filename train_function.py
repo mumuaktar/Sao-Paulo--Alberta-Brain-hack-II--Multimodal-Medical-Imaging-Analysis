@@ -48,7 +48,7 @@ def convert_to_single_channel(multi_channel_np: np.ndarray) -> np.ndarray:
     return output
 
 
-def train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, args):
+def train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, config: dict):
     """
     Train the model, monolithic function dealing with model training, evaluation and saving.
     Args:
@@ -58,14 +58,19 @@ def train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, ar
         optimizer: torch.optim.Optimizer, optimizer
         scheduler: torch.optim.lr_scheduler, learning rate scheduler
         start_epoch: int, start epoch
-        args: argparse.Namespace, arguments
+        config: dict, configuration dictionary
     """
     # Prepare model and output directory
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model: nn.Module = model.to(device)            # Move model to cuda:0
     model.train()
-    results_dir = os.path.join(args.output_dir, "results_test")
-    os.makedirs(results_dir,exist_ok=True)
+    
+    # Create output directory based on config name
+    output_dir = os.path.join(config['output_base_dir'], config['config_name'])
+    os.makedirs(output_dir, exist_ok=True)
+    
+    results_dir = os.path.join(output_dir, "results_test")
+    os.makedirs(results_dir, exist_ok=True)
 
     # Initialize loss functions, metrics, and auxiliary objects for output processing
     criterion = DiceLoss(to_onehot_y=False, sigmoid=True)  # internal sigmoid!
@@ -75,9 +80,9 @@ def train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, ar
     dice_metric = DiceMetric(include_background=True, reduction=MetricReduction.MEAN_BATCH, get_not_nans=True)
 
     # Initialize checkpoint paths and directories
-    checkpoint_path = os.path.join(args.output_dir, "best_model_test.pth")
-    last_model_path = os.path.join(args.output_dir, "last_model_test.pth")
-    training_results_dir = os.path.join(args.output_dir, "training_results_test")
+    checkpoint_path = os.path.join(output_dir, "best_model_test.pth")
+    last_model_path = os.path.join(output_dir, "last_model_test.pth")
+    training_results_dir = os.path.join(output_dir, "training_results_test")
     os.makedirs(training_results_dir, exist_ok=True)
 
     # Initialize best dice score and resume training if last model exists
@@ -96,7 +101,7 @@ def train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, ar
         print(f"Resuming with best Dice score: {best_dice_score:.4f}")
 
     # Each epoch performs one training loop and one validation loop
-    for epoch in range(start_epoch, args.max_epochs + 1):
+    for epoch in range(start_epoch, config['max_epochs'] + 1):
         print(f"\n🔁 Epoch {epoch}")
         model.train()
         train_loss = 0.0
@@ -166,7 +171,7 @@ def train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, ar
                     subject_id = batch["subject_id"][i]
 
                     # Get the image path for the original image to build output paths
-                    img_paths = [os.path.join(args.data_dir, "imagesTr", f"{subject_id}_0000.nii")]
+                    img_paths = [os.path.join(config['data_dir'], "imagesTr", f"{subject_id}_0000.nii")]
                     img_path = img_paths[0]
 
                     # Build save filenames

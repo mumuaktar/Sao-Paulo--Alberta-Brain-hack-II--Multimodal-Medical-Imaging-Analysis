@@ -7,3 +7,5 @@ torchinfo
 tqdm
 pyyaml
 python-dotenv
+matplotlib
+einops

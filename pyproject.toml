@@ -14,4 +14,6 @@ dependencies = [
     "tqdm",
     "pyyaml",
     "python-dotenv",
+    "matplotlib",
+    "einops"
 ]

@@ -170,7 +170,6 @@ def main(config: dict):
     print(summary(model))
 
     # === Training optimizer and learning rate scheduler setup ===
-    start_epoch = 1
     max_epochs = config['max_epochs']
     optimizer = torch.optim.AdamW(model.parameters(), lr=config['lr'], weight_decay=1e-5)
     scheduler = CosineAnnealingLR(optimizer, T_max=max_epochs, eta_min=1e-6)
@@ -178,7 +177,7 @@ def main(config: dict):
 
     # === Initialize data and call train() ===
     train_loader, val_loader = initialize_data_loaders(config)
-    train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, config)
+    train(train_loader, val_loader, model, optimizer, scheduler, config)
 
 
 if __name__ == "__main__":

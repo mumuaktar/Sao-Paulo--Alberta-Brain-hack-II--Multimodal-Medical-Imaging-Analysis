@@ -10,6 +10,9 @@ import os
 from functools import partial
 
 # Third-party library imports
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
+import matplotlib.pyplot as plt
 import nibabel as nib
 import numpy as np
 import torch
@@ -48,7 +51,7 @@ def convert_to_single_channel(multi_channel_np: np.ndarray) -> np.ndarray:
     return output
 
 
-def train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, config: dict):
+def train(train_loader, val_loader, model, optimizer, scheduler, config: dict):
     """
     Train the model, monolithic function dealing with model training, evaluation and saving.
     Args:
@@ -61,6 +64,7 @@ def train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, co
         config: dict, configuration dictionary
     """
     # Prepare model and output directory
+    start_epoch = 1
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model: nn.Module = model.to(device)            # Move model to cuda:0
     model.train()
@@ -88,6 +92,16 @@ def train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, co
     # Initialize best dice score and resume training if last model exists
     best_val_loss = float("inf")
     best_dice_score = -1.0
+    
+    # Initialize lists to track losses and Dice scores for plotting
+    train_losses = []
+    val_losses = []
+    mean_dice_scores = []
+    tc_dice_scores = []
+    wt_dice_scores = []
+    et_dice_scores = []
+    epochs_list = []
+    
     if os.path.exists(last_model_path):
         checkpoint = torch.load(last_model_path, map_location=device)
 
@@ -99,6 +113,15 @@ def train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, co
         start_epoch = checkpoint.get('epoch', 1) + 1
         print(f"Last model loaded. Resuming training from epoch: {start_epoch}")
         print(f"Resuming with best Dice score: {best_dice_score:.4f}")
+        
+        # Load previous history if available
+        train_losses = checkpoint.get('train_losses', [])
+        val_losses = checkpoint.get('val_losses', [])
+        mean_dice_scores = checkpoint.get('mean_dice_scores', [])
+        tc_dice_scores = checkpoint.get('tc_dice_scores', [])
+        wt_dice_scores = checkpoint.get('wt_dice_scores', [])
+        et_dice_scores = checkpoint.get('et_dice_scores', [])
+        epochs_list = checkpoint.get('epochs_list', list(range(1, start_epoch)))
 
     # Each epoch performs one training loop and one validation loop
     for epoch in range(start_epoch, config['max_epochs'] + 1):
@@ -138,6 +161,7 @@ def train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, co
         # Validation
         # ----------------------
         model.eval()
+        val_loss = 0.0
         with torch.no_grad():
             dice_metric.reset()
             for batch_idx, batch in enumerate(val_loader):
@@ -162,6 +186,10 @@ def train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, co
 
                 # Convert logits to first probabilities and then to discrete predictions
                 pred = post_pred(post_sigmoid(pred_seg))
+
+                # Compute validation loss
+                loss_seg = criterion(pred_seg, seg) + criterion_ce(pred_seg, seg)
+                val_loss += loss_seg.item()
 
                 # Compute Dice score
                 dice_metric(y_pred=pred, y=seg)
@@ -192,12 +220,60 @@ def train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, co
                     nib.save(nib.Nifti1Image(single_channel_pred, affine), save_pred_path)
                     nib.save(nib.Nifti1Image(single_channel_gt, affine), save_img_path)
 
+        # Average validation loss over all batches
+        val_loss /= len(val_loader)
+        print(f"Validation Loss: {val_loss:.4f}")
+        
         # Aggregate Dice scores over all validation samples
         per_class_dice, _ = dice_metric.aggregate()
         mean_dice = per_class_dice.mean().item()
         print(f"Dice Scores — TC: {per_class_dice[0].item():.4f}, "
               f"WT: {per_class_dice[1].item():.4f}, ET: {per_class_dice[2].item():.4f}")
         print(f"Mean Dice: {mean_dice:.4f}")
+        
+        # Track losses and Dice scores for plotting
+        train_losses.append(train_loss)
+        val_losses.append(val_loss)
+        mean_dice_scores.append(mean_dice)
+        tc_dice_scores.append(per_class_dice[0].item())
+        wt_dice_scores.append(per_class_dice[1].item())
+        et_dice_scores.append(per_class_dice[2].item())
+        epochs_list.append(epoch)
+        
+        # Plot and save loss curve
+        plt.figure(figsize=(10, 6))
+        plt.plot(epochs_list, train_losses, 'b-', label='Train Loss', linewidth=2)
+        plt.plot(epochs_list, val_losses, 'r-', label='Val Loss', linewidth=2)
+        plt.xlabel('Epoch', fontsize=12)
+        plt.ylabel('Loss', fontsize=12)
+        plt.title('Training and Validation Loss', fontsize=14)
+        plt.legend(fontsize=11)
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+        
+        # Save loss plot
+        loss_plot_path = os.path.join(output_dir, "loss_curves.png")
+        plt.savefig(loss_plot_path, dpi=150, bbox_inches='tight')
+        plt.close()
+        
+        # Plot and save Dice score curve
+        plt.figure(figsize=(10, 6))
+        plt.plot(epochs_list, mean_dice_scores, 'g-', label='Mean Dice', linewidth=2)
+        plt.plot(epochs_list, tc_dice_scores, 'b-', label='TC Dice', linewidth=2)
+        plt.plot(epochs_list, wt_dice_scores, 'r-', label='WT Dice', linewidth=2)
+        plt.plot(epochs_list, et_dice_scores, 'm-', label='ET Dice', linewidth=2)
+        plt.xlabel('Epoch', fontsize=12)
+        plt.ylabel('Dice Score', fontsize=12)
+        plt.title('Validation Dice Scores', fontsize=14)
+        plt.legend(fontsize=11)
+        plt.grid(True, alpha=0.3)
+        plt.ylim([0, 1])
+        plt.tight_layout()
+        
+        # Save Dice plot
+        dice_plot_path = os.path.join(output_dir, "dice_curves.png")
+        plt.savefig(dice_plot_path, dpi=150, bbox_inches='tight')
+        plt.close()
 
         # Is this the best Dice score so far?
         if mean_dice > best_dice_score:
@@ -220,7 +296,14 @@ def train(train_loader, val_loader, model, optimizer, scheduler, start_epoch, co
             "state_dict": model.state_dict(),
             "optimizer": optimizer.state_dict(),
             "scheduler": scheduler.state_dict(),
-            "best_dice_score": best_dice_score
+            "best_dice_score": best_dice_score,
+            "train_losses": train_losses,
+            "val_losses": val_losses,
+            "mean_dice_scores": mean_dice_scores,
+            "tc_dice_scores": tc_dice_scores,
+            "wt_dice_scores": wt_dice_scores,
+            "et_dice_scores": et_dice_scores,
+            "epochs_list": epochs_list
         }, last_model_path)
 
         # Step the learning rate scheduler

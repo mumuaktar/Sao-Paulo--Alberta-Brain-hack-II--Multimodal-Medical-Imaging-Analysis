@@ -1,6 +1,5 @@
-# Null paths will trigger looking for environment variables
-data_dir: null
-output_base_dir: null
+data_dir: null  # Null paths will trigger looking for environment variables
+output_base_dir: "./output"
 
 # Training parameters
 max_epochs: 200

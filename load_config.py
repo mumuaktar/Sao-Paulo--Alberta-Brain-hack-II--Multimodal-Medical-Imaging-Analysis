@@ -42,7 +42,7 @@ def load_config(config_path: str) -> dict:
     return config
 
 
-def get_config_args(description: str, example_usage: str, default_config: str = None) -> dict:
+def get_config_args(description: str = None, example_usage: str = None, default_config: str = None) -> dict:
     """
     Parse command line arguments and load configuration from YAML file.
     

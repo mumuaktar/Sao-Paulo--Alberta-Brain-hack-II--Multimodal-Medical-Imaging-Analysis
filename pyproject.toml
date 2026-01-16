@@ -1,0 +1,19 @@
+[project]
+name = "brainhack-2026-workshop-multimodal-medical-imaging-analysis"
+version = "0.1.0"
+description = "Multimodal Medical Imaging Analysis for Brain Tumor Segmentation"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "torch",
+    "monai",
+    "pandas",
+    "numpy",
+    "nibabel",
+    "torchinfo",
+    "tqdm",
+    "pyyaml",
+    "python-dotenv",
+    "matplotlib",
+    "einops"
+]

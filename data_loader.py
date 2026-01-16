@@ -3,14 +3,32 @@
 """
 Created on Mon Jan  5 13:19:13 2026
 
-@author: mumuaktar
+@author: mumuaktar, dscarmo
 """
-
+# Standard library imports
 import os
-import pandas as pd
 
-def build_data_list(df, base_path, label_path, text_feature_root):
-    def get_modality_paths(subject_id):
+# Third-party library imports
+import pandas as pd
+from monai.data import Dataset
+from torch.utils.data import DataLoader
+
+
+def build_data_list(df: pd.DataFrame, base_path: str, label_path: str, text_feature_root: str) -> list:
+    """
+    Build a list of data items from a DataFrame for MONAI Dataset.
+    
+    Args:
+        df: DataFrame containing SubjectID column
+        base_path: Base path to the dataset directory
+        label_path: Path to the segmentation labels directory
+        text_feature_root: Path to the text feature root directory
+        
+    Returns:
+        List of dictionaries, each containing paths to image modalities, segmentation, and text features
+    """
+    def get_modality_paths(subject_id: str) -> list:
+        """Get paths to all 4 MRI modality files for a subject"""
         img_root = os.path.join(base_path, "imagesTr")
         return [
             os.path.join(img_root, f"{subject_id}_0000.nii"),
@@ -32,23 +50,30 @@ def build_data_list(df, base_path, label_path, text_feature_root):
         data_list.append(item)
 
     return data_list
-from monai.data import Dataset
-from torch.utils.data import DataLoader
+
 
 def load_data(
-    base_path,
-    split,
+    base_path: str,
+    split: str,
     transforms,
-    batch_size=1,
-    shuffle=False,
-    num_workers=1,
-):
+    batch_size: int = 1,
+    shuffle: bool = False,
+    num_workers: int = 1,
+) -> DataLoader:
     """
-    General data loader for train / val / test
-
-    split: 'train', 'val', or 'test'
+    General data loader for train / val / test splits.
+    
+    Args:
+        base_path: Base path to the dataset directory
+        split: Dataset split, one of 'train', 'val', or 'test'
+        transforms: MONAI transform pipeline to apply
+        batch_size: Batch size for the DataLoader
+        shuffle: Whether to shuffle the data
+        num_workers: Number of worker processes for data loading
+        
+    Returns:
+        DataLoader instance ready for training/validation/testing
     """
-
     assert split in ["train", "val", "test"], "Invalid split name"
 
     label_path = os.path.join(base_path, "labelsTr")
@@ -87,7 +112,3 @@ def load_data(
     )
 
     return loader
-
-
-
-

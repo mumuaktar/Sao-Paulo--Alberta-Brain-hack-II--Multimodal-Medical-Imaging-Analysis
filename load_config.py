@@ -1,0 +1,117 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Configuration loading utilities for the multimodal medical imaging analysis project.
+
+@author: mumuaktar, dscarmo
+"""
+# Standard library imports
+import os
+import argparse
+import sys
+from pathlib import Path
+
+# Third-party library imports
+import yaml
+from dotenv import load_dotenv
+
+
+def load_config(config_path: str) -> dict:
+    """
+    Load configuration from YAML file.
+    
+    Loads environment variables from a .env file in the project root (if present)
+    before loading the YAML configuration.
+    
+    Args:
+        config_path: Path to the YAML configuration file
+        
+    Returns:
+        Dictionary containing configuration parameters
+    """
+    # Load environment variables from .env file (if present)
+    load_dotenv()
+    
+    config_path = Path(config_path)
+    if not config_path.exists():
+        raise FileNotFoundError(f"Config file not found: {config_path}")
+    
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    
+    return config
+
+
+def get_config_args(description: str = None, example_usage: str = None, default_config: str = None) -> dict:
+    """
+    Parse command line arguments and load configuration from YAML file.
+    
+    Args:
+        description: Description for the argument parser
+        example_usage: Example usage string for the epilog
+        default_config: Default config path for Jupyter notebooks
+        
+    Returns:
+        Dictionary containing configuration parameters with 'debug' and 'config_name' added
+    """
+    parser = argparse.ArgumentParser(description=description, epilog=example_usage)
+    
+    parser.add_argument(
+        "config",
+        type=str,
+        help="Path to YAML configuration file (required)"
+    )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug mode"
+    )
+
+    # Detect if running in Jupyter
+    if "ipykernel" in sys.modules:
+        # Jupyter: ignore sys.argv to prevent conflicts
+        if default_config is None:
+            raise ValueError("default_config must be provided for Jupyter notebooks")
+        parsed_args = parser.parse_args(args=[default_config])
+    else:
+        # Standard script: parse normally
+        parsed_args = parser.parse_args()
+
+    # Load configuration from YAML file
+    config = load_config(parsed_args.config)
+
+    # Check if data_dir is set, if not try to get from environment variable
+    if config.get('data_dir') is None:
+        config['data_dir'] = os.getenv('DATA_DIR', None)
+    
+    # Check if output_base_dir is set, if not try to get from environment variable
+    if config.get('output_base_dir') is None:
+        config['output_base_dir'] = os.getenv('OUTPUT_BASE_DIR', None)
+    
+    # Validate that required paths are set
+    if config.get('data_dir') is None:
+        raise ValueError(
+            "data_dir is not set. Please either:\n"
+            "  1. Set 'data_dir' in your YAML config file, or\n"
+            "  2. Set the DATA_DIR environment variable\n"
+        )
+    
+    if config.get('output_base_dir') is None:
+        raise ValueError(
+            "output_base_dir is not set. Please either:\n"
+            "  1. Set 'output_base_dir' in your YAML config file, or\n"
+            "  2. Set the OUTPUT_BASE_DIR environment variable\n"
+        )
+    
+    # Add debug flag and config metadata to the dictionary
+    config['debug'] = parsed_args.debug
+    config['config_path'] = parsed_args.config
+    config['config_name'] = Path(parsed_args.config).stem  # Get filename without extension
+    
+    # Pretty print configuration
+    print("Configuration:")
+    for key, value in config.items():
+        print(f"  {key}: {value}")
+    print("--------------------------------")
+
+    return config

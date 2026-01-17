@@ -1,0 +1,12 @@
+data_dir: null  # Null paths will trigger looking for environment variables
+output_base_dir: "./output"
+
+# Training parameters
+max_epochs: 200
+batch_size: 2
+feature_size: 48
+lr: 0.0001
+model: swinunetrti
+
+# Testing parameters
+test_batch_size: 1

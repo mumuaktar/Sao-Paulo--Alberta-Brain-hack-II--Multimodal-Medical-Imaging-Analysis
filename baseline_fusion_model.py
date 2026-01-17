@@ -19,6 +19,7 @@ from data_loader import load_data
 from load_config import get_config_args
 from train_function import train
 from transforms_function import train_transforms, val_transforms
+from swinunetrti import SwinUNETRTI
 
 
 class SwinUNETR_image_text_fusion(nn.Module):
@@ -160,11 +161,20 @@ def main(config: dict):
         config: Dictionary containing configuration parameters
     """
     # === Initialize model ===
-    model = SwinUNETR_image_text_fusion(
-       in_channels=4,
-       seg_out_channels=3,      # tumor classes
-       feature_size=config['feature_size']
-   )
+    if config['model'] == 'swinunetrti':
+        model = SwinUNETRTI(
+            in_channels=4,
+            out_channels=3,
+            feature_size=config['feature_size'],
+            text_feature_size=768,
+            use_checkpoint=True
+        )
+    else:
+        model = SwinUNETR_image_text_fusion(
+            in_channels=4,
+            seg_out_channels=3,      # tumor classes
+            feature_size=config['feature_size']
+        )
 
     # Print architectural summary
     summary(model)

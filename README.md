@@ -1,3 +1,5 @@
+***Overview of the Challenge Task***
+The brain hack challenge focuses on developing a segmentation algorithm delineating the tumor sub-regions: tumor core (TC), enhancing tumor (ET) and the whole tumor (WT). 
 ***Baseline Model Description***
 
 This repository provides a baseline multimodal brain tumor segmentation model that integrates MRI imaging data with associated textual information from medical reports using the TextBraTS dataset.

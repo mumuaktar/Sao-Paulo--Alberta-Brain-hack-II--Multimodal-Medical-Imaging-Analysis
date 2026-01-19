@@ -1,5 +1,16 @@
 ***Overview of the Challenge Task***
-The brain hack challenge focuses on developing a segmentation algorithm delineating the tumor sub-regions: tumor core (TC), enhancing tumor (ET) and the whole tumor (WT). 
+The Brain Hack challenge focuses on developing an automated segmentation approach for identifying and delineating distinct tumor-related regions within brain MRI scans from BRATS2020 dataset. Participants are tasked with separating three clinically meaningful tumor components: the tumor core (TC), the enhancing tumor (ET), and the whole tumor (WT). Accurate differentiation of these regions is essential, as each reflects different pathological characteristics and clinical relevance.
+
+The enhancing tumor corresponds to actively proliferating tumor tissue that exhibits contrast uptake, typically visible as regions of increased signal intensity in post-contrast T1-weighted images relative to surrounding healthy tissue. The tumor core represents the central mass of the lesion and includes both the enhancing components and non-enhancing necrotic areas, which often appear with reduced signal intensity on contrast-enhanced scans. The whole tumor encompasses the entire extent of abnormal tissue, combining the tumor core with surrounding edema or infiltrated regions, commonly highlighted by hyperintense signals in FLAIR sequences.
+
+Segmentation outputs are encoded using voxel-wise labels assigned to each tumor sub-region, while all non-tumorous tissue is categorized as background. Importantly, not all sub-regions are guaranteed to be present in every case, reflecting the heterogeneity of tumor presentations across subjects.
+
+Algorithmic performance is primarily evaluated using overlap and boundary-based metrics, namely the Dice Similarity Coefficient and the 95th percentile Hausdorff Distance, which together assess both volumetric agreement and spatial accuracy of the predicted segmentations. 
+
+Building upon this imaging-focused framework, the challenge further investigates multimodal brain tumor segmentation by incorporating volume-level textual data alongside MRI scans, inspired by the TextBraTS (https://github.com/Jupitern52/TextBraTS) paradigm. The accompanying text, derived from radiological reports and structured annotations, provides high-level semantic and clinical context that complements visual information. The main goal is to enable participants to leverage this textual guidance to resolve ambiguities in imaging and improve segmentation accuracy and robustness. This setting encourages the development of models that effectively integrate imaging and text for clinically meaningful tumor delineation.
+
+Participants may take part in the Brain Hack challenge either individually or as part of a team.
+
 ***Baseline Model Description***
 
 This repository provides a baseline multimodal brain tumor segmentation model that integrates MRI imaging data with associated textual information from medical reports using the TextBraTS dataset.

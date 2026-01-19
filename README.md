@@ -1,4 +1,5 @@
 ***Overview of the Challenge Task***
+
 The Brain Hack challenge focuses on developing an automated segmentation approach for identifying and delineating distinct tumor-related regions within brain MRI scans from BRATS2020 dataset. Participants are tasked with separating three clinically meaningful tumor components: the tumor core (TC), the enhancing tumor (ET), and the whole tumor (WT). Accurate differentiation of these regions is essential, as each reflects different pathological characteristics and clinical relevance.
 
 The enhancing tumor corresponds to actively proliferating tumor tissue that exhibits contrast uptake, typically visible as regions of increased signal intensity in post-contrast T1-weighted images relative to surrounding healthy tissue. The tumor core represents the central mass of the lesion and includes both the enhancing components and non-enhancing necrotic areas, which often appear with reduced signal intensity on contrast-enhanced scans. The whole tumor encompasses the entire extent of abnormal tissue, combining the tumor core with surrounding edema or infiltrated regions, commonly highlighted by hyperintense signals in FLAIR sequences.

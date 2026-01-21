@@ -4,9 +4,7 @@ The Brain Hack challenge focuses on developing an automated segmentation approac
 
 The enhancing tumor corresponds to actively proliferating tumor tissue that exhibits contrast uptake, typically visible as regions of increased signal intensity in post-contrast T1-weighted images relative to surrounding healthy tissue. The tumor core represents the central mass of the lesion and includes both the enhancing components and non-enhancing necrotic areas, which often appear with reduced signal intensity on contrast-enhanced scans. The whole tumor encompasses the entire extent of abnormal tissue, combining the tumor core with surrounding edema or infiltrated regions, commonly highlighted by hyperintense signals in FLAIR sequences.
 
-
 ![Tumor sub-region illustration](Slide2.jpg)
-
 
 Segmentation outputs are encoded using voxel-wise labels assigned to each tumor sub-region, while all non-tumorous tissue is categorized as background. Importantly, not all sub-regions are guaranteed to be present in every case, reflecting the heterogeneity of tumor presentations across subjects.
 

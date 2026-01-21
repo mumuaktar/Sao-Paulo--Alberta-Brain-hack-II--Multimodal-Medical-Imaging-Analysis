@@ -6,7 +6,7 @@ The enhancing tumor corresponds to actively proliferating tumor tissue that exhi
 
 
 
-figures/brats_subregions_annotated.png
+Slide2.png
 
 Segmentation outputs are encoded using voxel-wise labels assigned to each tumor sub-region, while all non-tumorous tissue is categorized as background. Importantly, not all sub-regions are guaranteed to be present in every case, reflecting the heterogeneity of tumor presentations across subjects.
 

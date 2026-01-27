@@ -1,7 +1,7 @@
 """
 Created on Mon Jan  5 12:57:05 2026
 
-@authors: mumuaktar, dscarmo
+@authors: mumuaktar
 """
 # Standard library imports
 import os

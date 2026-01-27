@@ -3,7 +3,7 @@
 """
 Created on Mon Jan  5 13:09:19 2026
 
-@author: mumuaktar, dscarmo
+@author: mumuaktar
 """
 # Standard library imports
 import os

@@ -95,13 +95,9 @@ we additionally provide `train_image_only()`, which:
 - ignores text features
 - calls the model in image-only mode
 
-To train an image-only model, simply replace:
+To train an image-only model, import and call `train_image_only(...)`
+instead of the default `train_function(...)`.
 
-    train(...)
-
-with:
-
-    train_image_only(...)
 
 In `baseline_fusion_model.py`, see the commented-out forward function
 that demonstrates how to run the model using image-only features.

@@ -83,3 +83,26 @@ python test.py configs/debug_config.yaml
 ```
 
 Make sure to adjust the config YAML files in the configs folder to point to your source directory and your desired output folder. 
+
+
+
+## Image-only baseline (optional)
+
+For participants who wish to perform an image-only ablation study,
+we additionally provide `train_image_only()`, which:
+
+- uses the same data loaders, optimizer, scheduler, and losses
+- ignores text features
+- calls the model in image-only mode
+
+To train an image-only model, simply replace:
+
+    train(...)
+
+with:
+
+    train_image_only(...)
+
+In `baseline_fusion_model.py`, see the commented-out forward function
+that demonstrates how to run the model using image-only features.
+

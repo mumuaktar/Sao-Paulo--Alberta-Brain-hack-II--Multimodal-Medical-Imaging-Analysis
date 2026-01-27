@@ -104,5 +104,5 @@ that demonstrates how to run the model using image-only features.
 
 ## Acknowledgments
 
-We thank @dscarmo for helpful contributions to code annotations,
+We thank @dscarmo for helpful contributions to code readability,
 debug utilities, and documentation.

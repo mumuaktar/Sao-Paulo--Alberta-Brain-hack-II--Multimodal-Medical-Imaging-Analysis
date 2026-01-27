@@ -3,7 +3,7 @@
 """
 Created on Mon Jan  5 12:57:05 2026
 
-@author: mumuaktar, dscarmo
+@author: mumuaktar
 """
 # Third-party library imports
 import numpy as np

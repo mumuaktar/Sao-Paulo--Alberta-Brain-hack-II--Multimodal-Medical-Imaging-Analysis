@@ -3,7 +3,7 @@
 """
 Configuration loading utilities for the multimodal medical imaging analysis project.
 
-@author: mumuaktar, dscarmo
+@author: dscarmo
 """
 # Standard library imports
 import os

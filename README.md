@@ -102,3 +102,7 @@ instead of the default `train_function(...)`.
 In `baseline_fusion_model.py`, see the commented-out forward function
 that demonstrates how to run the model using image-only features.
 
+## Acknowledgments
+
+We thank @dscarmo for helpful contributions to code annotations,
+debug utilities, and documentation.

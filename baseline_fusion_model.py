@@ -78,6 +78,29 @@ class SwinUNETR_image_text_fusion(nn.Module):
         This tensor is then passed through a 1x1x1 convolution to fuse the image and text features.
         The resulting tensor is passed through a segmentation head to produce the segmentation output.
         """
+
+        # ============================================================
+        # Image-only segmentation (NO text fusion)
+        # ------------------------------------------------------------
+        # If you want to run the model using only image features,
+        # you can comment out the text-fusion block below and
+        # directly feed the SwinUNETR image features to the
+        # segmentation head, as shown here:
+        #
+        # def forward(self, x: torch.Tensor) -> torch.Tensor:
+        #     # --- Image Backbone ---
+        #     img_features: torch.Tensor = self.backbone(x)  # [B, C, D, H, W]
+        #     self.print_debug(f"[Backbone] img_features: {img_features.shape}")
+        #
+        #     # --- Segmentation Head ---
+        #     seg_output: torch.Tensor = self.seg_head(img_features)
+        #     self.print_debug(f"[SegHead] seg_output: {seg_output.shape}")
+        #
+        #     return seg_output
+        # ============================================================
+
+
+        
         # --- Image Backbone ---
         img_features = self.backbone(x)  # [B, C, D, H, W]
         self.print_debug(f"[Backbone] img_features: {img_features.shape}")

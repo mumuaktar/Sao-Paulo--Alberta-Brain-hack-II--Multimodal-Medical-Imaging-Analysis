@@ -190,8 +190,8 @@ def train(train_loader, val_loader, model, optimizer, scheduler, config: dict):
                 pred = post_pred(post_sigmoid(pred_seg))
 
                 # Compute validation loss
-                loss_seg = criterion(pred_seg, seg) + criterion_ce(pred_seg, seg)
-                val_loss += loss_seg.item()
+                vloss_seg = criterion(pred_seg, seg) + criterion_ce(pred_seg, seg)
+                val_loss += vloss_seg.item()
 
                 # Compute Dice score
                 dice_metric(y_pred=pred, y=seg)
